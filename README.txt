@@ -31,6 +31,16 @@ run this to setup environment variables:
 For Windows, run this powershell script to generate ssl keys (required) in the same directory as the app
 > openssl req -x509 -newkey rsa:2048 -nodes -keyout localhost-key.pem -out localhost.pem -days 365
 
+
+CLOUD ACCOUNS OAUTH management
+Google Drive: 
+    please include the google client secret json file in the main folder of the app
+    titled : 'google_client_secret_file.json'
+
+
+OneDrive: 
+    After setting up the .env file via setup.py, please copy your clientID and client secret into the fields in .env
+
 then, run this: 
     (venv) > py run.py 
     // those that need to change py to python or python3, pls use that 
