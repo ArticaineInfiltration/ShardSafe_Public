@@ -26,8 +26,8 @@ def createEnvFile(filename=".env"):
                 f.write(f"{key}={value}\n")
             key = Fernet.generate_key().decode()
             f.write(f'\nFERNET_KEY=\'{key}\'\n')
-            f.write(f'\nCLIENT_ID=\'{key}\'\n')
-            f.write(f'\nCLIENT_SECRET=\'{key}\'\n')
+            f.write(f'\nCLIENT_ID=\'\'\n')
+            f.write(f'\nCLIENT_SECRET=\'\'\n')
             print(f"\n{filename} has been created successfully.")
 
     # create UPLOADSfolder
