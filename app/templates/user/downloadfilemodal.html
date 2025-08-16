@@ -1,0 +1,25 @@
+{% macro download_file_modal %}
+<div class="modal fade" id="downloadFileModal-{{fileName}}" tabindex="-1" aria-labelledby="downloadFile" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="modal-content" style="background-color: #f4f4f4;">
+        <div class="modal-header">
+          <h5 class="modal-title fs-5" >
+            Downloading File... 
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Delete</button>
+        
+        </div>
+      </div>
+  </div>
+</div>
+{% endmacro %}
+

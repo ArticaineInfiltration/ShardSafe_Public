@@ -1,0 +1,119 @@
+{% extends 'external/externalbase.html' %}
+
+{% block content %}
+<!--ec4a011d78cb781fddebbc69841fea0fa98d6fb9b9b56ad73bdcb55a5ce46f9b -->
+  <div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
+    <h2 class="mb-4 text-center fw-bold">Login To <br>ShardSafe</h2>
+    <form method="POST" id="login" action="{{ url_for('login.loginController') }}">
+        {{ form.hidden_tag() }}
+        {{ form.username.label }} {{ form.username(class='form-control',  placeholder="Enter your username",id="username") }}<br>
+        
+        {{ form.password.label }}
+        <div class="input-group mt-0 pt-0">
+          <div></div>
+           {{ form.password(class='form-control', placeholder="Enter your password", id="password", autocomplete="current-password") }}<br>
+           
+           <button class="btn btn-outline-secondary" type="button" id="togglePassword" title="Show/Hide Password">
+            <i class="bi bi-eye-slash" id="toggleIcon"></i>
+          </button>
+        </div>
+        
+        
+        <div class="d-flex justify-content-center">
+          {{ form.submitBtn (class="custom-grey-btn px-5 py-3 mt-4", id="enter")}}
+         <!-- <button type="submit" class="custom-grey-btn px-5 py-3">Login</button> -->
+      </div>
+    </form>
+    <div class="d-flex justify-content-between mt-3">
+      <a href="{{ url_for('auth.reset_password_page') }}">Forgot password?</a>
+      <a href="{{url_for('registerUser.registerUserController')}}">Create account</a>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/crypto.js') }}"></script>
+  <script>
+   
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('login');
+    
+    form.addEventListener('submit', async function(event) {
+      event.preventDefault();
+
+      const passwordInput = document.getElementById('password').value; 
+      const usernameInput = document.getElementById('username').value; 
+      const csrfToken = document.getElementById('csrf_token').value;
+      
+      //first submit the username
+       // Step 1: Send username to fetch crypto params
+      const paramsResponse = await fetch('/login', {
+        method: 'POST',
+        credentials:"include",
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ step: 1, username:usernameInput})
+      });
+      
+       const params = await paramsResponse.json();
+      if (params.status!=200) {
+        console.log(params.message);
+        return;
+      }
+      // now we have:
+      console.log("PARAMS: ");
+      console.log(params.status);
+      console.log(params.iv);
+      console.log(params.salt);
+      console.log(params.encryptedPrivateKey);
+      console.log(params.nonce);
+
+      // derive the key from password: 
+      const salt = params.salt;
+      const nonce = params.nonce;
+      const encryptedPrivateKey = params.encryptedPrivateKey;
+      const iv = params.iv;
+      const derivedKey = await deriveKeyFromPassword(passwordInput,salt);
+
+      //decrypt the pvt key: 
+      const pvtKey = await decryptLoginPrivateKey(encryptedPrivateKey,derivedKey,iv);
+      let sig = null;
+      // either returns object CryptoKey or null
+      if (pvtKey != null){
+        sig = await signData(nonce,pvtKey);
+        //alert (sig);
+      }else{
+        sig = "";
+      }
+      const res2 = await fetch('/login', {
+        method: 'POST',
+        credentials:"include",
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ step: 2, username:usernameInput,signature:sig})
+      });
+      if (!res2.ok) {
+        const errData = await res2.json();
+        //alert('entered bad');
+        const flashError= errData.flashError;
+        if (flashError){
+          const container = document.getElementById('flashError');
+          container.classList.remove('d-none');
+          document.getElementById('flashErrorText').textContent = flashError.message;
+        }
+      }
+      if (res2.ok){
+        // authentication passed
+        const response = await res2.json();
+        window.location.href = response.redirect;
+      }
+
+
+    });
+  });
+  </script>
+   
+</div>
+{% endblock %}

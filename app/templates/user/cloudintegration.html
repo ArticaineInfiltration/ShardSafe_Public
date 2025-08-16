@@ -1,0 +1,98 @@
+{% extends 'user/userbase.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="fw-bold">My Clouds</h2>
+  <hr>
+  <span class="badge bg-danger mb-3">CLOUD INTEGRATION</span>
+
+  <!-- Google Drive -->
+  <div class="d-flex align-items-center mb-4">
+    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3RaendkWxwbnlsA8UyDPmcDbqIMQETxKYpw&s" alt="Google Drive" width="40" class="me-3">
+    <span class="me-auto fs-5">Google Drive</span>
+    {% if user.isGoogleDriveAuth %}
+      <div class="d-flex align-items-center gap2">
+         <p class="mb-0 text-success me-2 small">You are logged in to Google Drive.</p>
+        <a href="/logout/gdrive" class="btn unlink">Logout</a>
+      </div>
+       
+    {% else %}
+      <div class="d-flex align-items-center gap-1">
+        <p class="mb-0 small me-2 text-danger"  >You are not logged in to Google Drive.</p>
+        <a href="/login/gdrive" class="btn gdrive " style="font-weight: 500;">Login to Google Drive</a>
+    
+      </div>
+        {% endif %}
+  </div>
+
+  <!-- Microsoft OneDrive -->
+ <div class="d-flex align-items-center mb-4">
+    <img src="https://download.logo.wine/logo/OneDrive/OneDrive-Logo.wine.png" alt="OneDrive" width="40" class="me-3">
+    <span class="me-auto fs-5">Microsoft OneDrive</span>
+    {% if user.isOneDriveAuth %}
+
+      <div class="d-flex align-items-center gap-2">
+        <p class="mb-0 small me-2 text-success">You are logged in to OneDrive.</p>
+        <a href="/logout/onedrive" class="btn unlink">Logout</a>
+      </div>
+        
+    {% else %}
+    <div class="d-flex align-items-center gap-2">
+        <p class="mb-0 small me-2 text-danger" style="color: red;">You are not logged in to OneDrive.</p>
+        <a href="/login/onedrive" class="btn onedrive" >Login to OneDrive</a>
+    </div>
+      
+    {% endif %}
+  </div>
+  <!-- AWS S3 -->
+  <div class="d-flex align-items-center mb-4">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Amazon-S3-Logo.svg/1200px-Amazon-S3-Logo.svg.png" alt="AWS S3" width="40" class="me-3">
+    <span class="me-auto fs-5">AWS S3</span>
+    {% if user.isAWSAuth ==True %}
+
+      <div class="d-flex align-items-center gap-2">
+        <p class="mb-0 small me-2 text-success">You are connected to your AWS S3 Bucket</p>
+        <a href="/logout/aws" class="btn unlink">Unlink</a>
+      </div>
+        
+    {% else %}
+    <div class="d-flex align-items-center gap2">
+        <p class="mb-0 small me-2 text-danger">You are not linked to S3 bucket.</p>
+        <a href="/login/aws" class="btn aws" data-bs-toggle="collapse" data-bs-target="#awsform">Link AWS S3 Bucket</a>
+    </div>
+      
+    {% endif %}
+  </div>
+
+  <!-- AWS S3 Fields -->
+   <div class="collapse mt-3" id ="awsform">
+        <form method="POST" action="{{ url_for('auth.bindAWSCreds') }}" >
+    <div class="mb-2">
+      {{ form.hidden_tag() }}
+      
+      {{form.accessKey.label}}
+      {{form.accessKey(class="form-control rounded-pill",style="width: 600px;")}}
+    </div>
+    <div class="mb-2">
+      {{form.secretAccessKey.label}}
+      {{form.secretAccessKey(class="form-control rounded-pill",style="width: 600px;")}}
+    </div>
+    <div class="mb-2">
+     {{form.bucketName.label}}
+      {{form.bucketName(class="form-control rounded-pill",style="width: 600px;")}}
+    </div>
+    <div class="mb-2">
+      {{form.region.label}}
+      {{form.region(class="form-control rounded-pill",style="width: 600px;")}}
+    </div class="mb-2  ms-1 form-check">
+      {{form.useARN(class="form-check-input")}}
+      {{form.useARN.label(class="form-check-label")}}
+      <p class="text-muted" style="font-size: small;">(This may be changed later)</p>
+      {{form.submit(class="btn btn-outline-dark mt-0  mb-4")}}
+    </div>
+    
+  </form>
+   </div>
+
+</div>
+{% endblock %}
