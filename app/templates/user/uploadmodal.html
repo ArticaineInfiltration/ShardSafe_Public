@@ -1,0 +1,333 @@
+{% macro upload_modal(form) %}
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="uploadForm"
+      enctype="multipart/form-data"
+      method="POST"
+      action="{{url_for('upload.uploadFileController')}}"
+     >
+
+      
+      {{ form.hidden_tag() }}
+      <div class="modal-content" style="background-color: #f4f4f4;">
+        <div class="modal-header">
+          <h5 class="modal-title fs-5" id="uploadModalLabel">Upload a File</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {{ form.file.label }}{{ form.file(class="form-control pt-1", style="background-color: #eaeaea;", id="fileInput") }}
+
+          <div class="pt-2"></div>
+          {{ form.fileType.label }}{{ form.fileType(class="form-select") }}
+          <div class="progress mt-3" style="height: 20px; display: none;" id="uploadProgress">
+            <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                 role="progressbar" style="width: 0%">0%</div>
+          </div>
+        </div>
+  <div class="modal-footer flex-column align-items-start">
+  <!-- Status section: full width -->
+  <div class="w-100 mb-2">
+    <div id="encStatusUpdate" class="text-muted mb-1"></div>
+
+    <div class="d-flex flex-column align-items-start">
+      <span id="encryptStatus" class="text-muted mb-1"></span>
+      <div id="spinner" class="spinner-border text-primary" role="status" style="display: none;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Buttons: aligned to end -->
+  <div class="w-100 d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Close</button>
+    {{ form.submit(class="btn btn-outline-dark", type="submit") }}
+  </div>
+</div>
+  
+      </div>
+    </form>
+  </div>
+</div>
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js" 
+integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" 
+crossorigin="anonymous"></script>
+<script src="{{ url_for('static', filename='js/crypto.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script>
+
+  // hash file to b64
+  async function hashFileToBase64(arrayBuffer) {
+    
+    const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+    return arrayBufferToBase64(hashBuffer);
+  }
+  
+function compressInWorker(arrayBuffer) {
+  const status = document.getElementById("encryptStatus");
+  status.textContent = "compressing..";
+  return new Promise((resolve, reject) => {
+    const worker = new Worker("{{ url_for('static', filename='js/compressworker.js') }}");  
+    worker.onmessage = (e) => {
+      if (e.data.status === 'success') {
+        resolve(e.data.compressed);
+      } else {
+        reject(new Error(e.data.message));
+      }
+      worker.terminate(); // clean up
+    };
+
+    worker.onerror = (err) => {
+      reject(err);
+      worker.terminate();
+    };
+
+    worker.postMessage({ type: 'compress', buffer: arrayBuffer }, [arrayBuffer]);
+  });
+}
+ // main encryption function
+async function encryptData(key, data,iv) {
+    
+    const encrypted = await crypto.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv: iv,
+      },
+      key,
+      data
+    );
+    return { encrypted, iv };
+  }
+
+    function uploadFile(file,fileHash,encryptedKey,encHash,fileSizeInBytes,encIV) {
+            const status = document.getElementById("encryptStatus");
+            const spinner = document.getElementById("spinner");
+            status.textContent = "Uploading...";
+            spinner.style.display = "inline-block";
+            const fileName = document.getElementById('fileInput').files[0].name;
+            const fileType = document.getElementById('fileType').value;
+            const csrftoken = document.getElementById('csrf_token').value;
+            const formData = new FormData();
+            
+            let blob;
+            if (file instanceof File) {
+              blob = file;
+            } else {
+              blob = new Blob([file], { type: fileType || 'application/octet-stream' });
+            }
+
+            formData.append('file', blob,fileName);
+            formData.append('fileType',fileType );
+            formData.append('fileName',fileName );
+            formData.append('fileHash',fileHash );
+            formData.append('encHash',encHash );
+            formData.append('csrf_token',csrftoken );
+            formData.append('encryptedKey',encryptedKey );
+            formData.append('encIV',encIV );
+            formData.append('fileSizeInBytes',fileSizeInBytes );
+      
+            fetch('/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                          'X-CSRFToken': csrftoken  // implement getCookie helper
+                        }
+            })
+                      .then(async response => {
+                        const result = await response.json();
+                        if (result.status == "ok"){
+                          status.textContent = "";
+                          spinner.style.display = "none";
+                          flashGood = document.getElementById('flashGood');
+                          flashGoodBtn = document.getElementById('flashGoodBtn');
+                          if (flashGood) {
+                            // window.location.href = result.redirect_url;
+                            flashGood.textContent =result.message
+                            flashGood.style.display='block';
+                            flashGoodBtn.classList.remove('d-none');
+
+                          }
+                         
+                        }
+                        if(result.status == "fail"){
+                          console.log('received fail');
+                          
+                          flashBad = document.getElementById('flashBad');
+                          flashBadBtn = document.getElementById('flashBadBtn');
+                          
+                          if (flashBad) {
+                            
+                            flashBad.textContent =result.message
+                            alert(result.message);
+                            flashBad.style.display='block';
+                            flashBadBtn.classList.remove('d-none');
+                            window.location.href = result.redirect_url;
+                            
+                          
+                          }
+                        }
+                        if(result.status == "internalError"){
+                          console.log('received fail');
+                          
+                          flashBad = document.getElementById('flashBad');
+                          flashBadBtn = document.getElementById('flashBadBtn');
+                          
+                          if (flashBad) {
+                            
+                            flashBad.textContent =result.message
+                            alert(result.message);
+                            flashBad.style.display='block';
+                            flashBadBtn.classList.remove('d-none');
+                            
+                          
+                          }
+                        }
+
+                        
+                       
+                            return result;
+                        
+                                    
+          })
+          .then(result => {
+              console.log('Upload response:', result);
+             if(result.status =='ok'){
+              document.getElementById("encStatusUpdate").textContent = "Encrypted File Split and stored!";
+              const modalElement = document.getElementById('uploadModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+
+                modalInstance.hide();
+                location.reload()
+            }
+             else{
+                document.getElementById("encStatusUpdate").textContent = "ERROR - File was not uploaded";
+                const modalElement = document.getElementById('uploadModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                modalInstance.hide();
+                
+                // window.location.href = result.redirect_url;
+               
+             }
+              })
+          .catch(error => {
+              console.error('Upload error:', error);
+              //alert(error.message);
+          });
+
+        }
+// Convert ArrayBuffer to Base64
+function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return btoa(binary);
+}
+
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    cookieVal = parts.pop().split(';').shift();
+    console.log("cookieVal->"+cookieVal);
+    return cookieVal;
+  }
+  return null;
+
+  }
+function getCookieAsBuffer(cookieName){
+  const cookies = document.cookie.split('; ');
+  for (const cookie of cookies){
+    const [key,val] = cookie.split('=');
+    if (key === cookieName){
+      const x = decodeURIComponent(val);
+      return stringToBuffer(x);
+    }
+  }
+  return null;
+}
+
+
+function stringToBuffer(str){
+  const encoder = new TextEncoder();
+  const buffer = encoder.encode(str);
+  return buffer;
+}
+
+// MAIN
+document.getElementById('uploadForm').addEventListener('submit', async function(event) {
+    console.log("upload form submitted");
+    const socket = io("https://127.0.0.1:443", {
+      transports: ["polling"],
+      secure: true
+    });
+
+    socket.on("connect", () => {
+      console.log("WebSocket connected with ID:", socket.id);
+    });
+
+    socket.on("update", (msg) => {
+      if (msg.step) {
+        console.log(msg.step);
+        document.getElementById('encStatusUpdate').textContent = msg.step;
+      }
+    });
+  event.preventDefault(); 
+  const status = document.getElementById("encryptStatus");
+  const spinner = document.getElementById("spinner");
+  
+  const fileInput = document.getElementById("fileInput");
+  const file = fileInput.files[0];
+  const fileBufferPre = await file.arrayBuffer();
+  const fileSizeInBytes = fileBufferPre.byteLength;
+
+  spinner.style.display = "inline-block";
+  status.textContent = "Compressing..";
+  
+  // compress here
+const fileBuffer = await compressInWorker(fileBufferPre);
+
+
+
+  const hash = await hashFileToBase64(fileBuffer);
+  status.textContent = "Preparing file";
+  
+  
+  console.log("pubkey:");
+  const pubKey = await importBase64PublicKey(getCookie('encPublicKey')); // actual pub key
+  console.log("pubkey done");
+  const rawFileKey = await  generateRandomAESKey(); //raw aes key
+  const b64Key = rawKeyToB64(rawFileKey);
+  const fileIV = crypto.getRandomValues(new Uint8Array(12));
+  const b64fileIV = bufferToBase64(fileIV);
+
+
+  const b64encryptedFileKey = await encryptRawAESKeyWithPublicKey(pubKey,rawFileKey);
+  status.textContent = "Encrypting...";
+  spinner.style.display = "inline-block";
+
+  
+  
+  console.log("HASH: ",hash);
+  const iv = getCookieAsBuffer('encIV');
+  const actualFileKey = await importAESKey(rawFileKey);
+  const {encrypted} = await encryptData(actualFileKey, fileBuffer,iv);
+  const encHash = await hashFileToBase64(encrypted);
+  console.log(encHash);
+  
+
+  
+  spinner.style.display = "none";
+  status.textContent = "";
+
+  // update enc done: 
+  document.getElementById("encStatusUpdate").textContent = "File Encrypted!";
+
+    
+  status.textContent = "Uploading...";
+  spinner.style.display = "inline-block";
+  // UPLOAD HERE: 
+  uploadFile(encrypted,hash,b64encryptedFileKey,encHash,fileSizeInBytes, bufferToBase64(iv));
+});
+
+</script>
+
+
+{% endmacro %}

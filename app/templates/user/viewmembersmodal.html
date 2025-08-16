@@ -1,0 +1,213 @@
+{% macro viewmembers_modal(group,index,current_user) %}
+
+<div class="modal fade" id="viewMembersModal{{ index }}" tabindex="-1" aria-labelledby="viewMembersModal{{ index }}Label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="viewMembersModal{{ index }}Label">Group Members</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+            <div>
+                <span class=" ">Invite User: </span>
+                <form action="{{url_for('group.inviteUserController')}}" method="POST" id="inviteForm">
+                    <div class="input-group">
+                        <input type="password" id="password" class="form-control" placeholder="Please enter your password">
+                        
+                    </div>
+                    <div class="input-group">
+               
+                        <input type="hidden" name="csrf_token" id="csrf_token" value="{{csrf_token()}}">
+                        
+                        <input type="hidden" name="group_id" id="group_id" value="{{group.id}}">
+                        <input type="text" name="username" id="username" class="form-control" placeholder="Username of invitee">
+                        <button type="submit" class="btn btn-primary ">
+                            <i class="bi bi-send"></i> Invite
+                        </button>
+                        
+                    </div>
+                    
+                    
+                </form>
+                
+            </div>
+          <div class="mb-3 max-height:600px; overflow-y: auto; mt-5">
+            Members:
+
+            <ul class="list-group"> 
+            {% for membership in group.memberships %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="">{{membership.user.username}}</span>
+                    <div>
+
+                        {% if current_user.username !=group.owner.username %}
+                            {% if membership.user.username == group.owner.username %}
+                            <button id="kickUser" class="btn btn-sm btn-danger">
+                                <i class="bi bi-person-x"></i>
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+            </ul>
+            
+            
+          </div>
+          <div class="mb-3">
+            <br> 
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          
+        </div>
+
+    </div>
+  </div>
+</div>
+<script>
+
+    function handleError(modalID,form,flashErrorMessage){
+        const query = '#'+modalID+ ' .btn-secondary[data-bs-dismiss="modal"]';
+         const cancelButton = document.querySelector(query);
+                form.reset();
+                if (cancelButton) {
+                cancelButton.click(); 
+                }
+                showFlashMessage('danger',flashErrorMessage);             
+               
+    }
+   
+
+
+     document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('inviteForm');
+        const csrfToken = document.getElementById('csrf_token').value;
+        const password = document.getElementById('password').value;
+       
+
+        form.addEventListener('submit',  async function (e) {
+        e.preventDefault();
+        
+        const fd1 = new FormData(form);
+        fd1.append('step',1);
+
+        // fetch to check if user exists, if so, get the public key 
+        const res1 = await fetch('/inviteuser', {
+                method: 'POST', 
+                credentials: 'same-origin',
+                headers: {  
+                            'X-CSRFToken': csrfToken,
+                            },
+                body: fd1,
+                
+                });
+        const jsonRes1 = await res1.json();
+        if (!jsonRes1.success){
+            handleError('viewMembersModal{{ index }}',form,jsonRes1.message);        
+               return null;
+        }else{
+            // decrypt owner's key
+            const ownerEncPrivateKey = getCookie('encPrivateKey_encrypted');
+            const ownerEncSalt = getCookie('encSalt');
+            const ownerEncIV = getCookie('encIV');
+            const inputPassword = document.getElementById('password').value;
+            const recipientPublicKey = await importBase64PublicKey(jsonRes1.encPublicKey);
+            const username = document.getElementById('username').value;
+            const group_id = document.getElementById('group_id').value;
+                                  
+
+            const ownerEncSGK = jsonRes1.ownerEncSGK;
+            
+            try{
+                console.log("deriving key");
+                const ownerKey = await deriveKeyFromPassword(inputPassword,ownerEncSalt);
+                
+                const ownerPrivateKey = await decryptEncPrivateKey(ownerEncPrivateKey,ownerKey,ownerEncIV);
+                if (ownerPrivateKey){
+                    // get the SGK: 
+                    const SGK =  await RSADecryptAESKey(ownerPrivateKey, ownerEncSGK);
+                    // sgk is arraybuffer
+                    if (SGK){
+
+                        //enc with invitee pub key: 
+                        const encryptedSGKBuffer = await crypto.subtle.encrypt(
+                        { name: 'RSA-OAEP' },
+                            recipientPublicKey,
+                        SGK
+                        );
+                        console.log("post invitee enc");
+                        console.log(encryptedSGKBuffer);
+                        const encryptedInviteeSGKB64 = bufferToBase64(encryptedSGKBuffer);
+                        
+                        const fd2 = new FormData();
+                        fd2.append('inviteeSGK',encryptedInviteeSGKB64);
+                        fd2.append('nonce',jsonRes1.nonce);
+                        fd2.append('group_id',group_id);
+                        fd2.append('step',2);
+                        fd2.append('username',username);
+
+                        const res2 =  await fetch('/inviteuser', {
+                                method: 'POST', 
+                                credentials: 'same-origin',
+                                headers: {  
+                                            'X-CSRFToken': csrfToken,
+                                            },
+                                body: fd2,
+                                
+                                });
+                        
+                        const jsonRes2 = await res2.json();
+                        if (!jsonRes2.success){
+                            console.log('in not success');
+                             handleError('viewMembersModal{{ index }}',form,jsonRes2.message);
+
+                        }else{
+                            const cancelButton = document.querySelector('#viewMembersModal{{ index }} .btn-secondary[data-bs-dismiss="modal"]');
+                            form.reset();
+                            if (cancelButton) {
+                            cancelButton.click(); 
+                            }
+                            location.reload();
+                           
+                        }
+
+
+
+
+                    }else{
+                        alert("Error in RSA decryption of PK");
+                        throw new Error("Error in RSA decryption of PK");
+                    }
+                     
+
+                }else{
+                    throw new Error("Incorrect password!");
+                }
+
+            }catch (error){
+                 console.error("Key derivation failed OR incorrect password..", error);
+                 handleError('viewMembersModal{{ index }}',form,"Invalid password or encryption failure.");    
+
+            }
+            
+
+
+
+
+        }
+
+
+        });
+    });
+        
+</script>
+
+
+{% endmacro %}

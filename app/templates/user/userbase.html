@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShardSafe - {{user.username}}</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/shardsafe.css') }}">
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  
+</head>
+<body class="body">
+
+
+<nav class="navbar navbar-expand-lg navbar-custom px-4 py-4">
+  <a class="navbar-brand fw-bold ps-2 fs-1" href="#"><span><i class="bi bi-shield-shaded"></span></i>SHARDSAFE</a>
+
+  <!-- hamburger for small screens  -->
+  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown"
+    aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation"
+     style="border:1px solid #e8e8e8; outline: none; box-shadow: none;">
+    <span class="" role="button" ><i class="fa fa-bars" aria-hidden="true" style="color:#b5b5b5;"></i></span>
+
+  </button>
+
+  <!-- collapse if small screen  -->
+  <div class="collapse navbar-collapse" id="navbarNavDropdown">
+    <div class="navbar-nav ms-auto">
+      <a class="nav-link {% if request.path == url_for('dashboard.viewFiles') %}active{% endif %} me-3" href="{{ url_for('dashboard.viewFiles') }}">View Files</a>
+      <a class="nav-link {% if request.path == url_for('dashboard.editProfile') %}active{% endif %} d-inline me-3" href="{{ url_for('dashboard.editProfile') }}">Edit Profile</a>
+      <a class="nav-link {% if request.path == url_for('dashboard.cloudIntegrationPage') %}active{% endif %} me-3" href="{{ url_for('dashboard.cloudIntegrationPage') }}">My Clouds</a>     
+      <a class="nav-link {% if request.path == url_for('login.logoutController') %}active{% endif %} me-3" href="{{ url_for('login.logoutController') }}">LOGOUT</a>
+    </div>
+  </div>
+</nav>
+<div id="flash-messages"></div>
+<div id="flashMessage" class="alert alert-dismissible fade d-none" role="alert">
+  <span id="flashMessageText"></span>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+<div id="flashGood" class="alert alert-success  alert-dismissible fade d-none">
+  <button  id = "flashGoodBtn" type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+
+<div id="flashBad" class="alert alert-danger  alert-danger alert-dismissible fade d-none">
+  <button id = "flashBadBtn" type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      {% if category == 'danger' or category == 'error' or category == 'message' %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          {{ message }}
+          
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        {% elif category =='message' or category =='warning' %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+          {{ message }}
+          
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% else %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          {{ message }}
+        
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+      
+
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+  </div>
+  <div class="d-flex justify-content-center">
+    <h1 class="ps-5 pt-3 me-auto">Hello, {{user.username|upper}}</h1>
+    <button class="btn 
+    {% if user.allowSharing %}
+    custom-green-btn
+    {% else %}
+    unlink
+    {% endif %}
+    ms-auto mt-4 me-4 mb-3"style="" data-bs-toggle="modal" data-bs-target="#sharingConfig">
+      <small>
+        {% if user.allowSharing %}
+      
+      {% else %}
+      NOT
+      {% endif %}
+      open to receive shares
+      </small>
+      
+    </button>
+  </div>
+{% block content %}
+{% endblock %}
+
+<!-- modal for sharing config-->
+
+<div class="modal fade" id="sharingConfig" tabindex="-1" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class=" modal-dialog">
+    <div class="modal-content " style="background-color: #f4f4f4 ;">
+      <div class="modal-header">
+          <div class="modal-title fw-bolder" >
+            Sharing Configurations
+            
+          </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="{{url_for('dashboard.configureSharing')}}">
+          {{configForm.hidden_tag()}}
+          <div class="mb-2 d-flex justify-content-between gap-2">
+            {{configForm.sharingOptions.label.text}}
+            {% for subfield in configForm.sharingOptions %}
+              {{subfield(class="form-check-input", id=subfield.id)}}
+              {{subfield.label.text}}
+            {% endfor %}
+
+
+          </div>
+          
+          <div class="mx-auto">
+            {{configForm.submit(class='btn btn-outline-dark')}}
+          </div>
+       
+        </form>
+       
+       
+       
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+
+  function showFlashMessage(type, message) {
+    const flashMap = {
+        success: document.getElementById('flashGood'),
+        danger: document.getElementById('flashBad'),
+        generic: document.getElementById('flashMessage')
+    };
+
+    
+    Object.values(flashMap).forEach(flash => flash.classList.add('d-none'));
+
+   
+    const flashBox = flashMap[type] || flashMap.generic;
+
+    const textSpan = flashBox.querySelector('span') || flashBox;
+    textSpan.textContent = message;
+
+    flashBox.classList.remove('d-none', 'fade');
+    flashBox.classList.add('show');
+
+    
+    setTimeout(() => {
+        flashBox.classList.add('fade');
+        flashBox.classList.remove('show');
+    }, 5000);
+}
+
+  
+ function isCryptoSupported() {
+    try {
+      return (
+        window.crypto &&
+        window.crypto.getRandomValues &&
+        window.crypto.subtle &&
+        typeof TextEncoder !== "undefined" &&
+        typeof TextDecoder !== "undefined"
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) {
+        cookieVal = parts.pop().split(';').shift();
+        console.log("cookieVal->"+cookieVal);
+        return cookieVal;
+      }
+      return null;
+
+      }
+      function checkAuthCookie() {
+        const sessionCookie = getCookie('encPublicKey');
+        if (!sessionCookie) {
+          alert('Session expired, please re-login for your security');
+          window.location.href = '/logout'; 
+        }
+        
+      }
+     
+
+
+
+  document.addEventListener("DOMContentLoaded", () => {
+    checkAuthCookie();
+    if (!isCryptoSupported()) {
+      const warning = document.createElement("div");
+      warning.className = "alert alert-danger m-3";
+      warning.innerHTML = `
+        <strong>Your browser does not support secure encryption.</strong>
+        Please update to the latest version of Chrome, Firefox, Safari, or Edge.
+      `;
+      document.body.prepend(warning);
+    }else{
+      
+    }
+  });
+
+  setInterval(checkAuthCookie, 6000); // 60,000ms = 1 min
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>

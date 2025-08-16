@@ -1,0 +1,145 @@
+{% import 'admin/deleteusermodal.html' as deleteUserModal %}
+{% import 'admin/toggleadminmodal.html' as toggleAdminModal %}
+{% extends 'admin/adminbase.html' %}
+
+{% block content %}
+<div class="container mt-5">
+  <div >
+      <div>
+      <form method="get" action="{{ url_for('admin.adminViewProfiles') }}" class="d-flex my-3" style="max-width: 400px;">
+        <input type="text" name="q" class="form-control me-2" placeholder="Search by username or email..." value="{{ request.args.get('q', '') }}">
+        <button class="btn btn-outline-dark" type="submit">Search</button>
+      </form>
+    </div>
+    
+<div class="d-flex justify-content-between align-items-center flex-wrap">
+      
+      <h3 class="mb-0">Viewing User accounts:</h3>
+      
+
+      <div class="d-none d-md-flex gap-4">
+        <h4 class="mb-0" style="color: rgb(59, 4, 122);">Total users: {{ totalCount }}</h4>
+        <h4 class="mb-0" style="color: rgb(10, 66, 189);">Regular users: {{ userCount }}</h4>
+        <h4 class="mb-0" style="color: rgb(180, 21, 15);">Admins: {{ adminCount }}</h4>
+      </div>
+    </div>
+  
+    <hr class="custom-blackline mt-0 ">
+    <div class="row fw-bold border-bottom pb-2 mb-2 mt-5">
+      <div class="col-4 me-3">Username</div>
+      <div class="col-4 ">Email</div>
+      <div class="col-3 d-none d-md-block">Role</div>
+     
+    </div>
+
+    
+    
+    <div class="file-list-container" style="max-height: 70vh;  overflow-y: auto;">
+    {% for user in users %}
+    <div class="d-flex align-items-center justify-content-between border py-2 px-3 mb-2 bg-white shadow-sm">
+      
+      <div class="d-flex align-items-center gap-4 overflow-hidden" style="flex: 1;">
+        <div class="text-truncate col-4 me-4 " style="max-width: 30%;">
+          <strong>{{ user.username }}</strong>
+        </div>
+        <div class="  col-5 ">{{ user.email }}</div>
+        <div class="col-3 d-none d-md-block">{{ user.role }}</div>
+        
+      </div>
+
+      <!-- Inline buttons for md and up -->
+      <div class="d-flex align-items gap-2 ms-2 me-4 d-none d-md-flex">
+        <button type="button" class="btn btn-sm btn-outline-warning d-flex align-items-center justify-content-center"
+         title="Grant/Revoke Admin"  data-bs-toggle="modal" data-bs-target="#toggleAdminModal{{ user.username }}"
+            type="button">
+          <i class="bi-shield-check"></i>
+        </a>
+        </button>
+        <button type="button" 
+        data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.username }}"
+        class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center" title="Delete Account">
+          <i class="bi bi-person-dash"></i>
+        </button>
+
+      </div>
+
+      <!-- Hamburger dropdown for small screens -->
+      <div class="dropdown d-flex d-md-none">
+        <button class="btn btn-sm btn-outline-secondary" type="button" id="dropdownMenuButton{{ loop.index }}" data-bs-toggle="dropdown" aria-expanded="false" title="Actions">
+          <i class="fas fa-bars"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ loop.index }}">
+          <li>
+            <a target="_blank" href="#" class="dropdown-item d-flex align-items-center gap-2 "
+             data-bs-toggle="modal" data-bs-target="#toggleAdminModal{{ user.username }}"
+            type="button" >
+              <i class="bi bi-shield"></i> Grant/Revoke Admin
+            </a>
+          </li>
+           
+          <li>
+            <button class="dropdown-item d-flex align-items-center gap-2 text-danger" 
+            data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.username }}"
+            type="button" title="Delete Account">
+              <i class="bi bi-person-dash"></i>Delete Account
+            </button>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    {% endfor %}
+
+    {% for user in users %}
+      {{ deleteUserModal.delete_user_modal(user) }}
+      {{ toggleAdminModal.toggle_admin_modal(user) }}
+    {% endfor %}
+  </div>
+  <div class="d-flex justify-content-center mt-4">
+    <nav aria-label="File pagination">
+      <ul class="pagination pagination-sm mb-0">
+
+        {% if pagination.pages > 0 %}
+            {% if pagination.has_prev %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('dashboard.viewFiles', tab=active_tab, page=pagination.prev_num) }}" aria-label="Previous">
+                &laquo; Prev
+              </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">&laquo; Prev</span>
+            </li>
+            {% endif %}
+
+            <li class="page-item disabled">
+              <span class="page-link">
+                Page {{ pagination.page }} of {{ pagination.pages }}
+              </span>
+            </li>
+
+            {% if pagination.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('dashboard.viewFiles', tab=active_tab, page=pagination.next_num) }}" aria-label="Next">
+                Next &raquo;
+              </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">Next &raquo;</span>
+            </li>
+            {% endif %}
+
+          </ul>
+          {% else %}
+          <div class="mt-5 pt-5 text-muted">
+            You do not have any files to view
+          </div>
+
+        {% endif %}
+    
+  </div>
+</div>
+   
+{% endblock %}
