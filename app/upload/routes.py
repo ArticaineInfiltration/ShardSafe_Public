@@ -17,7 +17,6 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaIoBaseUpload
 from app import socketio
 from app.static.tools.FileEncryption import encryptFile
-from app.static.tools.miscTools import determineMime
 import json,hashlib,base64
 
 THRESHOLD = 2

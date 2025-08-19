@@ -1,7 +1,7 @@
 import hashlib 
 import os
 import base64
-import magic,secrets
+import secrets
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.serialization import load_der_public_key
@@ -11,15 +11,6 @@ def emitUpdate(data):
     print("EMITTING: "+str(data))
     socketio.emit("update", data)
 
-def determineMime(file, userFileType)->bool:
-    file.seek(0)
-    file_bytes = file.read()
-    file.seek(0)  # Reset the stream pointer for further use
-    detected_mime = magic.from_buffer(file_bytes, mime=True)
-    if detected_mime == 'application/octet-stream' and userFileType == 'video/mp4':
-        return True
-    print("Detected MIME type:", detected_mime)
-    return detected_mime == userFileType
 
 def creds_to_dict(creds):
     return {
