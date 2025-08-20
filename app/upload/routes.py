@@ -14,8 +14,7 @@ import google.oauth2.credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-from googleapiclient.http import MediaIoBaseUpload
-from app import socketio
+from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownloadfrom app import socketio
 from app.static.tools.FileEncryption import encryptFile
 import json,hashlib,base64
 
@@ -86,10 +85,17 @@ def upload_to_gdrive(name, data_bytes, base_filename):
     drive = build('drive', 'v3', credentials=creds)
     root_id = ensure_gdrive_folder(drive, 'shardsafe')
     subfolder_id = ensure_gdrive_folder(drive, base_filename, parent_id=root_id)
-    media = MediaIoBaseUpload(io.BytesIO(data_bytes), mimetype='application/octet-stream')
+    media = MediaIoBaseUpload(io.BytesIO(data_bytes), mimetype='application/octet-stream',resumable=True)
     metadata = {'name': name, 'parents': [subfolder_id]}
-    file = drive.files().create(body=metadata, media_body=media, fields='id').execute()
-    return True, {'webUrl': f"https://drive.google.com/file/d/{file.get('id')}/view"}
+    # file = drive.files().create(body=metadata, media_body=media, fields='id').execute()
+    request = drive.files().create(body=metadata, media_body=media, fields='id')
+    response = None
+    while response is None:
+        status, response = request.next_chunk()
+        if status:
+            print(f"Uploaded {int(status.progress() * 100)}%")
+    file_id = response.get('id')
+    return True, {'webUrl': f"https://drive.google.com/file/d/{file_id}/view"}
 
 def upload_to_s3(name, data, bucket, s3, base_filename):
     key = f"{base_filename}/{name}"
