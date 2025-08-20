@@ -35,7 +35,7 @@ def adminViewProfiles():
     totalCount = query.count()
     adminCount = totalCount - userCount
 
-    return render_template('admin/viewProfiles.html',
+    return render_template('admin/viewprofiles.html',
                            user=current_user,
                            users=usersPaginated.items,
                            pagination=usersPaginated,

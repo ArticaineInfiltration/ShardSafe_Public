@@ -104,7 +104,7 @@ def loginController():
                     # session['loginIV'] = user.loginIV
                     # session['loginSalt'] = user.loginSalt
                     
-                    if user.role == 'admin':
+                    if user.role == 'admin' or user.role == 'superadmin':
                         path = '/admin'
                     else:
                         path = '/dashboard'

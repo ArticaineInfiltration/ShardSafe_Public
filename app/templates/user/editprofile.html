@@ -1,4 +1,4 @@
-{% if current_user.role == 'admin' %}
+{% if current_user.role == 'admin' or current_user.role =='superadmin' %}
   {% extends 'admin/adminbase.html' %}
 {% else %}
   {% extends 'user/userbase.html' %}
