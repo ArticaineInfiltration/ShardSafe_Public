@@ -16,9 +16,19 @@
         </div>
         <div class="modal-body">
           {{ form.file.label }}{{ form.file(class="form-control pt-1", style="background-color: #eaeaea;", id="fileInput") }}
-
+		
           <div class="pt-2"></div>
           {{ form.fileType.label }}{{ form.fileType(class="form-select") }}
+          <div class = "pt-2"></div>
+          <label for="encryptionType"> Encryption Type:</label>
+          <select id="encryptionType" name="encryptionType" class="form-select me-3 mb-2" >
+          	<option value="aes-256-gcm" selected>Default (AES-256-GCM)</option>
+          	
+          	<option value="aes-cbc" >Legacy-systems compatible (AES-CBC)</option>
+          	
+          	<option value="chacha20-poly1305" >Mobile-friendly (ChaCha20-Poly1305) </option>
+          </select>
+          	
           <div class="progress mt-3" style="height: 20px; display: none;" id="uploadProgress">
             <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
                  role="progressbar" style="width: 0%">0%</div>
@@ -254,7 +264,7 @@ function stringToBuffer(str){
 // MAIN
 document.getElementById('uploadForm').addEventListener('submit', async function(event) {
     console.log("upload form submitted");
-    const socket = io("https://127.0.0.1:443", {
+    const socket = io("https://127.0.0.1:8888", {
       transports: ["polling"],
       secure: true
     });
@@ -282,7 +292,20 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
   status.textContent = "Compressing..";
   
   // compress here
-const fileBuffer = await compressInWorker(fileBufferPre);
+ 
+ let fileBuffer;
+ 
+ 	const fileTypeToCheck = document.getElementById("fileType").value;
+ 	
+ 	
+ 	if (fileTypeToCheck === 'other' || fileTypeToCheck === 'video/mp4'){
+ 		fileBuffer = fileBufferPre;
+ 		console.log('skippped compression');
+ 	}else{
+ 		console.log("compressing...");
+ 		fileBuffer = await compressInWorker(fileBufferPre);
+ 	}
+
 
 
 

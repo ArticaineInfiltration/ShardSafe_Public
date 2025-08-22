@@ -172,6 +172,9 @@ def uploadFileController():
             
             fileSize =  actualFileSize      
             fileMime = file.mimetype
+            print("file mime=",fileMime)
+            if fileMime == 'application/octet-stream':
+            	fileMime ='other'
             owner = current_user.username
             
             file.stream.seek(0, os.SEEK_END)  # Move to end of stream
@@ -283,7 +286,7 @@ def uploadFileController():
                     # socketio.emit("update", {"step": "DONE"})
                     # Thread(target=emitUpdate, args=({"step":"DONE"},)).start()
                     socketio.start_background_task(emitUpdate, {"step": "DONE"})
-                    flash(f"{success} fragments successfully uploaded", 'warning')
+                    flash(f"{success} fragments successfully uploaded - NOTE: Full data protection requires at least 3 drives! ", 'warning')
                     return jsonify({'status': 'ok', 'redirect_url': url_for('dashboard.viewFiles'), 'message': 'Upload successful'})
 
             if success >= THRESHOLD:

@@ -113,10 +113,12 @@ def downloadFileController(localFileIdentifier):
                     data = request.get_json()
                     getDecryptionParams = data.get('getDecryptionParams')
                     if getDecryptionParams:
+                        print("fileType=",file.fileType)
                         return jsonify({"encIV":file.encIV,
                                         "key":file.ownerKey,
                                         "fileHash":file.fileHash,
-                                        "fileName":file.fileName})
+                                        "fileName":file.fileName,
+                                        "fileType":file.fileType})
                     else:
                          return jsonify({"encIV":"",
                                         "key":"",

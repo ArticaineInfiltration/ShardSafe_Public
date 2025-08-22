@@ -45,6 +45,7 @@ class FileUploadForm(FlaskForm):
         ('text/plain','.txt'),
         ('video/mp4','.mp4'),
         ('application/pdf','.pdf'),
+        ('other','other (.exe, .elf, folders, etc)'),
         ('application/vnd.openxmlformats-officedocument.wordprocessingml.document','.docx')])
     submit = SubmitField('Upload')
 

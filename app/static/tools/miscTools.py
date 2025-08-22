@@ -78,7 +78,8 @@ def getExtensionsFromMime(mime_type):
         'video/mp4': '.mp4',
         'application/pdf': '.pdf',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'.docx',
-        'text/plain': '.txt'
+        'text/plain': '.txt',
+        'other': 'other'
     }
     return mimeMap.get(mime_type)
 
